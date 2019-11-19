@@ -1,0 +1,144 @@
+version: '3.4'
+
+x-logging: &default-logging
+  options:
+    max-size: '5g'
+    max-file: '1'
+  driver: json-file
+
+services:
+
+  kafka:
+    image: catenae/kafka
+    volumes:
+      - ../kafka/server.properties:/opt/kafka/default/config/server.properties:ro
+      - ./kafka/data:/opt/kafka/default/logs
+      - ./kafka/logs/kafka:/tmp/kafka-logs
+      - ./kafka/logs/zookeeper:/tmp/zookeeper
+    logging: *default-logging
+    ulimits:
+      nproc: 65535
+      nofile: 15000
+    restart: unless-stopped
+
+  aerospike:
+    image: aerospike/aerospike-server:4.3.0.7
+    volumes:
+      - ../aerospike/aerospike.conf:/opt/aerospike/etc/aerospike.conf:ro
+      - ./aerospike/data:/opt/aerospike/data
+    command: --config-file /opt/aerospike/etc/aerospike.conf
+    logging: *default-logging
+    ulimits:
+      nofile: 15000
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:4.0-xenial
+    command: --wiredTigerCacheSizeGB 2
+    ports:
+      - 27017
+    volumes:
+      - ./mongo/data:/data/db
+    logging: *default-logging
+    restart: unless-stopped
+
+  subreddit_explorer:
+    image: registry.phd.brunneis.dev/fuc-benchmark
+    command: subreddit_explorer.py -k kafka:9092 -m mongodb:27017 -a aerospike:3000 -o measures
+    logging: *default-logging
+    depends_on:
+      - aerospike
+      - mongodb
+      - kafka
+    restart: unless-stopped
+
+  subreddit_chooser:
+    image: registry.phd.brunneis.dev/fuc-benchmark
+    command: subreddit_chooser.py -k kafka:9092 -m mongodb:27017
+    logging: *default-logging
+    depends_on:
+      - mongodb
+      - kafka
+    restart: unless-stopped
+
+  user_updater:
+    image: registry.phd.brunneis.dev/fuc-benchmark
+    command: user_updater.py -k kafka:9092 -m mongodb:27017 -i measures,new_models -o stats
+    logging: *default-logging
+    volumes:
+      - ./model_trainer:/tmp/catenae/model_trainer
+    depends_on:
+      - mongodb
+      - kafka
+    restart: always
+
+  user_extractor:
+    image: registry.phd.brunneis.dev/fuc-benchmark
+    command: user_extractor.py -k kafka:9092 -o users_texts
+    logging: *default-logging
+    depends_on:
+      - kafka
+    restart: unless-stopped
+
+  user_chooser:
+    image: registry.phd.brunneis.dev/fuc-benchmark
+    # DO NOT MODIFY COMMAND LINE (without modifying launch.sh)
+    command: user_chooser.py -k kafka:9092 -m mongodb:27017
+    logging: *default-logging
+    depends_on:
+      - mongodb
+      - kafka
+    restart: unless-stopped
+
+  user_classifier:
+    # DO NOT RESTART, MODEL WILL CHANGE DURING BATCH TRAINING
+    image: registry.phd.brunneis.dev/fuc-benchmark
+    command: user_classifier.py -k kafka:9092 -i users_texts
+    logging: *default-logging
+    depends_on:
+      - kafka
+
+  subreddit_storer:
+    image: registry.phd.brunneis.dev/fuc-benchmark
+    command: subreddit_storer.py -k kafka:9092 -m mongodb:27017 -a aerospike:3000 -i subreddits
+    logging: *default-logging
+    depends_on:
+      - aerospike
+      - mongodb
+      - kafka
+    restart: unless-stopped
+
+  stats_dumper:
+    image: registry.phd.brunneis.dev/fuc-benchmark
+    command: stats_dumper.py -k kafka:9092 -m mongodb:27017 -a aerospike:3000 -i stats
+    logging: *default-logging
+    depends_on:
+      - aerospike
+      - mongodb
+      - kafka
+    restart: unless-stopped
+
+  model_trainer:
+    # DO NOT RESTART, IN MEMORY DATASET
+    image: registry.phd.brunneis.dev/fuc-benchmark
+    # DO NOT MODIFY COMMAND LINE (without modifying launch.sh)
+    command: model_trainer.py -k kafka:9092 -i users_texts
+    logging: *default-logging
+    volumes:
+      - ./model_trainer:/tmp/catenae/model_trainer
+    depends_on:
+      - aerospike
+      - mongodb
+      - kafka
+
+  batch_proba_updater:
+    image: registry.phd.brunneis.dev/fuc-benchmark
+    # DO NOT MODIFY COMMAND LINE (without modifying launch.sh)
+    command: batch_proba_updater.py -k kafka:9092 -m mongodb:27017
+    logging: *default-logging
+    volumes:
+      - ./model_trainer:/tmp/catenae/model_trainer
+    depends_on:
+      - mongodb
+      - kafka
+    restart: unless-stopped
