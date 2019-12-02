@@ -57,7 +57,7 @@ class SubredditChooser(Link):
             if subreddit_id == None:
                 raise ValueError
             self.logger.log(f'Selected subreddit: {subreddit_id} for explorer {subreddit_explorer}')
-            self.rpc_call(subreddit_explorer, 'put_subreddit', subreddit_id)
+            self.rpc_notify('put_subreddit', subreddit_id, to=subreddit_explorer)
 
         except Exception:
             self.logger.log(level='exception')
@@ -67,7 +67,7 @@ class SubredditChooser(Link):
                 time.sleep(0.5)
                 self.request_subreddit(context, attempts - 1)
             else:
-                self.rpc_call(subreddit_explorer, 'reject_request')
+                self.rpc_notify('reject_request', to=subreddit_explorer)
 
 
 if __name__ == "__main__":

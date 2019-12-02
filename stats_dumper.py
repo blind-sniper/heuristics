@@ -32,14 +32,14 @@ class StatsDumper(Link):
 
         elif event == 'user_explorer_seen_user':
             user_id = electron.value['value']['user_id']
-            if not self.aerospike.exists(user_id, set_='seen_users'):
-                self.aerospike.put(user_id, set_='seen_users')
+            if not self.aerospike.exists(user_id, set_name='seen_users'):
+                self.aerospike.put(user_id, set_name='seen_users')
                 self.mongodb.put(electron.value)
 
         elif event == 'user_explorer_seen_subreddit':
             subreddit_id = electron.value['value']['subreddit_id']
-            if not self.aerospike.exists(subreddit_id, set_='seen_subreddits'):
-                self.aerospike.put(subreddit_id, set_='seen_subreddits')
+            if not self.aerospike.exists(subreddit_id, set_name='seen_subreddits'):
+                self.aerospike.put(subreddit_id, set_name='seen_subreddits')
                 self.mongodb.put(electron.value)
 
         # Store other events

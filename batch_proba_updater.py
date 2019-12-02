@@ -13,13 +13,11 @@ from depression_classifier import DepressionClassifier
 class BatchProbaUpdater(Link):
     def setup(self):
         if len(self.args) < 1:
-            self.logger.log('The threshold parameter was not provided.', level='error')
-            self.suicide()
+            self.suicide('the threshold parameter was not provided.')
 
         self.threshold = float(self.args[0])
         if self.threshold == 0:
-            self.logger.log('Pseudofeedback training is disabled.')
-            self.suicide(exit_code=0)
+            self.suicide('pseudofeedback training is disabled.')
 
         self.mongodb.set_defaults('fuc_benchmark', 'users_ranking')
         self.classifier = DepressionClassifier()

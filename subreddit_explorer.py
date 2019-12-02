@@ -53,8 +53,8 @@ class SubredditExplorer(Link):
                 # Filter repeated submissions
                 submission_id = rch.get_submission_id(submission)
 
-                if not self.aerospike.exists(submission_id, set_='seen_submissions'):
-                    self.aerospike.put(submission_id, set_='seen_submissions')
+                if not self.aerospike.exists(submission_id, set_name='seen_submissions'):
+                    self.aerospike.put(submission_id, set_name='seen_submissions')
                 else:
                     continue
 
@@ -102,8 +102,8 @@ class SubredditExplorer(Link):
                 # Filter repeated comments
                 comment_id = rch.get_comment_id(comment)
 
-                if not self.aerospike.exists(comment_id, set_='seen_comments'):
-                    self.aerospike.put(comment_id, set_='seen_comments')
+                if not self.aerospike.exists(comment_id, set_name='seen_comments'):
+                    self.aerospike.put(comment_id, set_name='seen_comments')
                 else:
                     continue
 
@@ -150,7 +150,7 @@ class SubredditExplorer(Link):
     def reject_request(self, context):
         self.logger.log('Subreddit request rejected', level='warn')
         time.sleep(5)
-        self.rpc_call('SubredditChooser', 'request_subreddit')
+        self.rpc_notify('request_subreddit', to='SubredditChooser')
 
     @rpc
     def put_subreddit(self, context, subreddit_id):
@@ -159,7 +159,7 @@ class SubredditExplorer(Link):
             self.subreddits_queue.put(subreddit_id)
             return
         self.logger.log(f'Received NOT VALID subreddit {subreddit_id} via RPC')
-        self.rpc_call('SubredditChooser', 'request_subreddit')
+        self.rpc_notify('request_subreddit', to='SubredditChooser')
 
     def _explore(self, subreddit_id):
         self.logger.log(f'Exploring subreddit: {subreddit_id}')
@@ -170,7 +170,7 @@ class SubredditExplorer(Link):
         running = True
         while (running):
             self.logger.log(f'Subreddit requested')
-            self.rpc_call('SubredditChooser', 'request_subreddit')
+            self.rpc_notify('request_subreddit', to='SubredditChooser')
             try:
                 subreddit_id = self.subreddits_queue.get()
                 if subreddit_id not in self.seen_subreddits:

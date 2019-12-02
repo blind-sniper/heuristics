@@ -59,7 +59,7 @@ class UserExtractor(Link):
 
     def reject_request(self, context):
         time.sleep(5)
-        self.rpc_call('UserChooser', 'request_user')
+        self.rpc_notify('request_user', to='UserChooser')
 
     @rpc
     def put_user(self, context, user_id):
@@ -68,7 +68,7 @@ class UserExtractor(Link):
             self.users_ranking_queue.put(user_id)
             return
         self.logger.log(f'Received NOT VALID user {user_id} via RPC')
-        self.rpc_call('UserChooser', 'request_user')
+        self.rpc_notify('request_user', to='UserChooser')
 
     def _extract(self, user_id):
         self.logger.log(f'Extracting user: {user_id}')
@@ -92,7 +92,7 @@ class UserExtractor(Link):
         running = True
         while (running):
             self.logger.log(f'User requested')
-            self.rpc_call('UserChooser', 'request_user')
+            self.rpc_notify('request_user', to='UserChooser')
             try:
                 user_id = self.users_ranking_queue.get()
                 if user_id not in self.seen_users:

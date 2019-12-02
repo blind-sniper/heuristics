@@ -230,16 +230,16 @@ class UserChooser(Link):
             if user_id == None:
                 raise ValueError
             self.logger.log(f'Selected user: {user_id} for extractor {user_extractor}')
-            self.rpc_call(user_extractor, 'put_user', user_id)
+            self.rpc_notify('put_user', user_id, to=user_extractor)
 
         except Exception:
-            self.logger.log(level='exception')
+            self.logger.log(level='debug')
             self.logger.log(f'Cannot retrieve an user for extractor {user_extractor}', level='warn')
             if attempts > 0:
                 time.sleep(0.5)
                 self.request_user(context, attempts - 1)
             else:
-                self.rpc_call(user_extractor, 'reject_request')
+                self.rpc_notify('reject_request', to=user_extractor)
 
 
 if __name__ == "__main__":

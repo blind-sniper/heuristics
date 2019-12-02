@@ -32,7 +32,7 @@ class UserClassifier(Link):
         if message_type == 'eou' and user_id in self.wordcounts:
             wordcount = self.wordcounts.pop(user_id)
             proba = self.classifier.predict(wordcount)
-            self.rpc_call('ModelTrainer', 'add_user_proba', [user_id, proba])
+            self.rpc_notify('add_user_proba', [user_id, proba], to='ModelTrainer')
 
             count = self.counts.pop(user_id)
             self.send_user_prediction_event(user_id, proba, count)

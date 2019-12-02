@@ -16,13 +16,11 @@ class ModelTrainer(Link):
 
     def setup(self):
         if len(self.args) < 1:
-            self.logger.log('The threshold parameter was not provided.', level='error')
-            self.suicide()
+            self.suicide('The threshold parameter was not provided.')
 
         self.threshold = float(self.args[0])
         if self.threshold == 0:
-            self.logger.log('Pseudofeedback training is disabled.')
-            self.suicide(exit_code=0)
+            self.suicide('pseudofeedback training is disabled.')
 
         self.training_mode = 'all'
         valid_training_modes = ['all', 'positive', 'negative']
@@ -111,8 +109,8 @@ class ModelTrainer(Link):
                 }
             })
         self.send(electron, topic='stats')
-        self.rpc_call('UserUpdater', 'update_model', paths)
-        self.rpc_call('BatchProbaUpdater', 'update_model', paths)
+        self.rpc_notify('update_model', paths, to='UserUpdater')
+        self.rpc_notify('update_model', paths, to='BatchProbaUpdater')
         self.logger.log(
             f'MODEL TRAINED - training set size: {self.training_set_sizes[0]} (pos), {self.training_set_sizes[1]} (neg)'
         )
